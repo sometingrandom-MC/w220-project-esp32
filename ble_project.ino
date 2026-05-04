@@ -155,10 +155,13 @@ void setup() {
 }
 
 void loop() {
+  // Serial debugging controls
   if (Serial.available() > 0) {
     char incomingByte = Serial.read();
-    if (incomingByte == '1' || incomingByte == '0') {
-
+    if (incomingByte == '1') {
+        car.setInverterState(true);
+    } else if (incomingByte == '0') {
+        car.setInverterState(false);
     }
   }
 
