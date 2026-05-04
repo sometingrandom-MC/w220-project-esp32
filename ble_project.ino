@@ -64,7 +64,7 @@ class Car {
     }
 
     // Reads the battery voltage from the ADC pin and does proper conversions.
-    float readBatteryVoltage() {
+    float getBatteryVoltage() {
       int rawValue = analogRead(_batteryAdcInput);
 
       // 12-bit ADC conversion. Converts to 3.3v
@@ -169,7 +169,7 @@ void loop() {
 
     // Sends all data to BLE device
     // Sends battery voltage
-    float currentVoltage = car.readBatteryVoltage();
+    float currentVoltage = car.getBatteryVoltage();
 
     pVoltageChar->setValue((uint8_t*)&currentVoltage, sizeof(currentVoltage));
     pVoltageChar->notify();
