@@ -10,10 +10,11 @@
 #define BATTERY_VOLTAGE_CHARACTERISTIC_UUID "0859e192-00ba-4690-bb66-94d2d132a255"
 #define INVERTER_STATE_CHARACTERISTIC_UUID "83a4e976-f0ac-49b7-8212-27724af75ab6"
 
+// Class that represents the physical vehicle and all of its systems
 class Car {
   private:
     int _batteryAdcInput;
-    int _inverterRelayOutput; // Specific name for the relay control
+    int _inverterRelayOutput;
 
   public:
     Car(int batteryInput, int inverterOutput) {
@@ -32,7 +33,7 @@ class Car {
       digitalWrite(_inverterRelayOutput, HIGH); // Start OFF (Active-Low)
     }
 
-    // Encapsulate the relay logic
+    // Controls the relay state
     void setInverterState(bool turnOn) {
       if (turnOn) {
         Serial.println("System -> Inverter: ON");
@@ -49,6 +50,7 @@ class Car {
         return _inverterState;
     }
 
+    // Controls if automatic mode (for the inverter) is turned on
     void setAutomaticState(bool enable) {
         if (enable) {
             Serial.println("System -> Automatic Inverter Control: ON");
@@ -61,6 +63,7 @@ class Car {
         return _inverterAutomaticState;
     }
 
+    // Reads the battery voltage from the ADC pin and does proper conversions.
     float readBatteryVoltage() {
       int rawValue = analogRead(_batteryAdcInput);
 
@@ -159,17 +162,18 @@ void loop() {
     lastReadTime = currentTime;
 
 
-    //Send new data to BLE device
+    // Sends all data to BLE device
+    // Sends battery voltage
     float currentVoltage = car.readBatteryVoltage();
 
     pVoltageChar->setValue((uint8_t*)&currentVoltage, sizeof(currentVoltage));
     pVoltageChar->notify();
-
+    // Sends inverter state
     bool inverterState = car.getInverterState();
 
     pInverterState->setValue((uint8_t*)&inverterState, 1);
     pInverterState->notify();
-
+    // Sends inverter auto mode state
     bool inverterAutomaticState = car.getAutomaticState();
 
     pAutomaticInverterMode->setValue((uint8_t*)&inverterAutomaticState, 1);
