@@ -154,22 +154,9 @@ void setup() {
   Serial.println("System Ready.");
 }
 
-void loop() {
-  // Serial debugging controls
-  if (Serial.available() > 0) {
-    char incomingByte = Serial.read();
-    if (incomingByte == '1') {
-        car.setInverterState(true);
-    } else if (incomingByte == '0') {
-        car.setInverterState(false);
-    }
-  }
 
-  unsigned long currentTime = millis();
-  if (currentTime - lastReadTime >= interval) {
-    lastReadTime = currentTime;
-
-
+// Called to update states over BLE immedately after changes
+void bleUpdateStates() {
     // Sends all data to BLE device
     // Sends battery voltage
     float currentVoltage = car.getBatteryVoltage();
@@ -186,6 +173,25 @@ void loop() {
 
     pAutomaticInverterMode->setValue((uint8_t*)&inverterAutomaticState, 1);
     pAutomaticInverterMode->notify();
+}
+
+void loop() {
+  // Serial debugging controls
+  if (Serial.available() > 0) {
+    char incomingByte = Serial.read();
+    if (incomingByte == '1') {
+        car.setInverterState(true);
+        bleUpdateStates();
+    } else if (incomingByte == '0') {
+        car.setInverterState(false);
+        bleUpdateStates();
+    }
+  }
+
+  unsigned long currentTime = millis();
+  if (currentTime - lastReadTime >= interval) {
+    lastReadTime = currentTime;
+
   }
 
   delay(10);
