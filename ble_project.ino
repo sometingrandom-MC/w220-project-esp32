@@ -9,6 +9,9 @@
 #define AUTOMATIC_INVERTER_MODE_CHARACTERISTIC_UUID "beb5483e-36e1-4688-b7f5-ea07361b26a8"
 #define BATTERY_VOLTAGE_CHARACTERISTIC_UUID "0859e192-00ba-4690-bb66-94d2d132a255"
 #define INVERTER_STATE_CHARACTERISTIC_UUID "83a4e976-f0ac-49b7-8212-27724af75ab6"
+#define INVERTER_ON_THRESHOLD 13.2
+#define INVERTER_OFF_THRESHOLD 12.8
+#define INVERTER_EMERGENCY_THRESHOLD 12.0
 
 // Class that represents the physical vehicle and all of its systems
 class Car {
@@ -184,6 +187,8 @@ void loop() {
     }
   }
 
+
+
   unsigned long currentTime = millis();
   if (currentTime - lastReadTime >= interval) {
     lastReadTime = currentTime;
@@ -194,7 +199,20 @@ void loop() {
     pVoltageChar->setValue((uint8_t*)&currentVoltage, sizeof(currentVoltage));
     pVoltageChar->notify();
 
-    bleUpdateStates();
+    // Automatic inverter state control based on battery voltage and automatic mode state
+    if (currentVoltage < INVERTER_OFF_THRESHOLD && car.getAutomaticState()) {
+        car.setInverterState(false);
+        bleUpdateStates();
+    } else if (currentVoltage >= INVERTER_ON_THRESHOLD && car.getAutomaticState()) {
+        car.setInverterState(true);
+        bleUpdateStates();
+    } else if (currentVoltage < INVERTER_EMERGENCY_THRESHOLD) {
+        car.setInverterState(false);
+        bleUpdateStates();
+    } else {
+        bleUpdateStates();
+    }
+
 
   }
 
