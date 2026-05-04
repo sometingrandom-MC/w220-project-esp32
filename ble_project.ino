@@ -97,9 +97,11 @@ class InverterStateCallbacks: public BLECharacteristicCallbacks {
       if (value.length() > 0) {
           if (value[0] == '1') {
             car.setInverterState(true);
+            car.setAutomaticState(false);
           }
           else if (value[0] == '0') {
             car.setInverterState(false);
+            car.setAutomaticState(false);
           }
       }
     }
@@ -180,9 +182,11 @@ void loop() {
     char incomingByte = Serial.read();
     if (incomingByte == '1') {
         car.setInverterState(true);
+        car.setAutomaticState(false);
         bleUpdateStates();
     } else if (incomingByte == '0') {
         car.setInverterState(false);
+        car.setAutomaticState(false);
         bleUpdateStates();
     }
   }
