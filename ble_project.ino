@@ -157,12 +157,8 @@ void setup() {
 
 // Called to update states over BLE immedately after changes
 void bleUpdateStates() {
-    // Sends all data to BLE device
-    // Sends battery voltage
-    float currentVoltage = car.getBatteryVoltage();
+    // Sends states to BLE device
 
-    pVoltageChar->setValue((uint8_t*)&currentVoltage, sizeof(currentVoltage));
-    pVoltageChar->notify();
     // Sends inverter state
     bool inverterState = car.getInverterState();
 
@@ -191,6 +187,14 @@ void loop() {
   unsigned long currentTime = millis();
   if (currentTime - lastReadTime >= interval) {
     lastReadTime = currentTime;
+
+    // Sends battery voltage on interval
+    float currentVoltage = car.getBatteryVoltage();
+
+    pVoltageChar->setValue((uint8_t*)&currentVoltage, sizeof(currentVoltage));
+    pVoltageChar->notify();
+
+    bleUpdateStates();
 
   }
 
