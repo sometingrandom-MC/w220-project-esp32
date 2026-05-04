@@ -10,3 +10,9 @@ git clone https://github.com/sometingrandom-MC/w220-project-esp32.git
 cd w220-project-esp32
 arduino-cli compile --fqbn esp32:esp32:esp32c3 --port /dev/ttyUSB0 --upload .
 ```
+
+## Debugging Instructions
+To access the serial connection for debugging, use the following command after installing picocom.
+```
+picocom /dev/ttyUSB0 -b 115200
+```
