@@ -67,14 +67,16 @@ class Car {
     float readBatteryVoltage() {
       int rawValue = analogRead(_batteryAdcInput);
 
-      // 12-bit ADC conversion
+      // 12-bit ADC conversion. Converts to 3.3v
       // $$V_{out} = \frac{ADC_{raw}}{4095} \times 3.3$$
       float voltage = (rawValue / 4095.0) * 3.3;
 
+      //Prints data to serial for debugging
       Serial.print("Battery Input -> Raw: ");
       Serial.print(rawValue);
       Serial.print(" | Voltage: ");
       Serial.println(voltage);
+
       return voltage;
     }
 };
@@ -85,6 +87,7 @@ Car car(BATTERY_VOLTAGE_PIN, RELAY_PIN);
 unsigned long lastReadTime = 0;
 const long interval = 1000;
 
+// Sets inverter state when the BLE characteristic is written to
 class InverterStateCallbacks: public BLECharacteristicCallbacks {
     void onWrite(BLECharacteristic *pCharacteristic) {
       String value = pCharacteristic->getValue();
@@ -99,6 +102,7 @@ class InverterStateCallbacks: public BLECharacteristicCallbacks {
     }
 };
 
+// Sets automatic mode's state when the BLE characteristic is written to
 class InverterAutomaticCallbacks: public BLECharacteristicCallbacks {
     void onWrite(BLECharacteristic *pCharacteristic) {
       String value = pCharacteristic->getValue();
@@ -113,6 +117,7 @@ class InverterAutomaticCallbacks: public BLECharacteristicCallbacks {
     }
 };
 
+// Initializes the BLE Characteristics
 BLECharacteristic *pVoltageChar;
 BLECharacteristic *pInverterState;
 BLECharacteristic *pAutomaticInverterMode;
