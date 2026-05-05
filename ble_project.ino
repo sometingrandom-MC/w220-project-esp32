@@ -190,6 +190,8 @@ void loop() {
         car.setInverterState(false);
         car.setAutomaticState(false);
         bleUpdateStates();
+    } else if (incomingByte == '2') {
+        car.setAutomaticState(true);
     }
   }
 
