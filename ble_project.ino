@@ -192,6 +192,7 @@ void loop() {
         bleUpdateStates();
     } else if (incomingByte == '2') {
         car.setAutomaticState(true);
+        bleUpdateStates();
     }
   }
 
