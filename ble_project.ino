@@ -12,6 +12,7 @@
 #define INVERTER_ON_THRESHOLD 13.2
 #define INVERTER_OFF_THRESHOLD 12.8
 #define INVERTER_EMERGENCY_THRESHOLD 12.0
+#define DEBUG_MODE true // Emergency threshold bypass
 
 // Class that represents the physical vehicle and all of its systems
 class Car {
@@ -210,7 +211,7 @@ void loop() {
     } else if (currentVoltage >= INVERTER_ON_THRESHOLD && car.getAutomaticState()) {
         car.setInverterState(true);
         bleUpdateStates();
-    } else if (currentVoltage < INVERTER_EMERGENCY_THRESHOLD) {
+    } else if (currentVoltage < INVERTER_EMERGENCY_THRESHOLD && !DEBUG_MODE) {
         car.setInverterState(false);
         bleUpdateStates();
     } else {
