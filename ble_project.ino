@@ -61,6 +61,7 @@ class Car {
         } else {
             Serial.println("System -> Automatic Inverter Control: OFF");
         }
+        _inverterAutomaticState = enable;
     }
 
     bool getAutomaticState() {
