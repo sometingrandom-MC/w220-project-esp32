@@ -88,7 +88,7 @@ Car car(BATTERY_VOLTAGE_PIN, RELAY_PIN);
 unsigned long lastReadTime = 0;
 const long interval = 1000;
 
-// Handles BLE Client Disconnections to restart advertising
+// Handles BLE client disconnections to restart advertising
 class ServerCallbacks: public BLEServerCallbacks {
     void onDisconnect(BLEServer* pServer) {
       Serial.println("Client disconnected. Restarting BLE advertising...");
