@@ -19,17 +19,14 @@ class Car {
   private:
     int _batteryAdcInput;
     int _inverterRelayOutput;
+    bool _inverterState = false;
+    bool _inverterAutomaticState = true;
 
   public:
     Car(int batteryInput, int inverterOutput) {
       _batteryAdcInput = batteryInput;
       _inverterRelayOutput = inverterOutput;
     }
-    private:
-        bool _inverterState = false;
-        bool _inverterAutomaticState = true;
-
-    public:
 
     // Initialize pins and default states
     void begin() {
@@ -73,7 +70,6 @@ class Car {
       int rawValue = analogRead(_batteryAdcInput);
 
       // 12-bit ADC conversion. Converts to 3.3v
-      // $$V_{out} = \frac{ADC_{raw}}{4095} \times 3.3$$
       float voltage = (rawValue / 4095.0) * 3.3;
 
       //Prints data to serial for debugging
@@ -91,6 +87,14 @@ Car car(BATTERY_VOLTAGE_PIN, RELAY_PIN);
 
 unsigned long lastReadTime = 0;
 const long interval = 1000;
+
+// Handles BLE Client Disconnections to restart advertising
+class ServerCallbacks: public BLEServerCallbacks {
+    void onDisconnect(BLEServer* pServer) {
+      Serial.println("Client disconnected. Restarting BLE advertising...");
+      BLEDevice::startAdvertising();
+    }
+};
 
 // Sets inverter state when the BLE characteristic is written to
 class InverterStateCallbacks: public BLECharacteristicCallbacks {
@@ -129,17 +133,21 @@ BLECharacteristic *pVoltageChar;
 BLECharacteristic *pInverterState;
 BLECharacteristic *pAutomaticInverterMode;
 
-
-
 void setup() {
   Serial.begin(115200);
 
   // Use the class to handle hardware initialization
   car.begin();
+
   // Bluetooth Initialization
   BLEDevice::init("Mercedes-Benz S430");
   BLEServer *pServer = BLEDevice::createServer();
+
+  // Assign the server callbacks here so advertising restarts on disconnect
+  pServer->setCallbacks(new ServerCallbacks());
+
   BLEService *pService = pServer->createService(SERVICE_UUID);
+
   pInverterState = pService->createCharacteristic(
       INVERTER_STATE_CHARACTERISTIC_UUID,
       BLECharacteristic::PROPERTY_READ | BLECharacteristic::PROPERTY_NOTIFY | BLECharacteristic::PROPERTY_WRITE
@@ -161,19 +169,15 @@ void setup() {
   Serial.println("System Ready.");
 }
 
-
-// Called to update states over BLE immedately after changes
+// Called to update states over BLE immediately after changes
 void bleUpdateStates() {
-    // Sends states to BLE device
-
     // Sends inverter state
     bool inverterState = car.getInverterState();
-
     pInverterState->setValue((uint8_t*)&inverterState, 1);
     pInverterState->notify();
+
     // Sends inverter auto mode state
     bool inverterAutomaticState = car.getAutomaticState();
-
     pAutomaticInverterMode->setValue((uint8_t*)&inverterAutomaticState, 1);
     pAutomaticInverterMode->notify();
 }
@@ -195,8 +199,6 @@ void loop() {
         bleUpdateStates();
     }
   }
-
-
 
   unsigned long currentTime = millis();
   if (currentTime - lastReadTime >= interval) {
@@ -221,8 +223,6 @@ void loop() {
     } else {
         bleUpdateStates();
     }
-
-
   }
 
   delay(10);
