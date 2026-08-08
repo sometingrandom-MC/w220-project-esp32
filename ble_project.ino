@@ -31,7 +31,7 @@ class Car {
     // Initialize pins and default states
     void begin() {
       pinMode(_inverterRelayOutput, OUTPUT);
-      digitalWrite(_inverterRelayOutput, HIGH); // Start OFF (Active-Low)
+      digitalWrite(_inverterRelayOutput, LOW); // Start OFF (Active-High)
     }
 
     // Controls the relay state
@@ -39,11 +39,11 @@ class Car {
       if (turnOn) {
         Serial.println("System -> Inverter: ON");
         _inverterState = true;
-        digitalWrite(_inverterRelayOutput, LOW);
+        digitalWrite(_inverterRelayOutput, HIGH);
       } else {
         Serial.println("System -> Inverter: OFF");
         _inverterState = false;
-        digitalWrite(_inverterRelayOutput, HIGH);
+        digitalWrite(_inverterRelayOutput, LOW);
       }
     }
 
