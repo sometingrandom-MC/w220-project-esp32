@@ -69,8 +69,9 @@ class Car {
     float getBatteryVoltage() {
       int rawValue = analogRead(_batteryAdcInput);
 
-      // 12-bit ADC conversion. Converts to 3.3v
-      float voltage = (rawValue / 4095.0) * 3.3;
+      // 12-bit ADC conversion. Converts to 12v
+      float voltage = (rawValue / 4095.0) * 3.3 * 5;
+
 
       //Prints data to serial for debugging
       Serial.print("Battery Input -> Raw: ");
