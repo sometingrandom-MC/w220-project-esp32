@@ -2,17 +2,29 @@
 #include <BLEUtils.h>
 #include <BLEServer.h>
 #include <cstdint>
+#include <esp_sleep.h>
 
+// ESP32 Pin Configuration
 #define RELAY_PIN 18
 #define BATTERY_VOLTAGE_PIN 3
+
+// Bluetooth UUID Configuration
 #define SERVICE_UUID "4fafc201-1fb5-459e-8fcc-c5c9c331914b"
 #define AUTOMATIC_INVERTER_MODE_CHARACTERISTIC_UUID "beb5483e-36e1-4688-b7f5-ea07361b26a8"
 #define BATTERY_VOLTAGE_CHARACTERISTIC_UUID "0859e192-00ba-4690-bb66-94d2d132a255"
 #define INVERTER_STATE_CHARACTERISTIC_UUID "83a4e976-f0ac-49b7-8212-27724af75ab6"
+
+// Voltage Thresholds
 #define INVERTER_ON_THRESHOLD 13.2
 #define INVERTER_OFF_THRESHOLD 12.8
 #define INVERTER_EMERGENCY_THRESHOLD 12.0
 #define DEBUG_MODE true // Emergency threshold bypass
+
+// Sleep Configuration
+#define AWAKE_DURATION_SECONDS 2
+#define SLEEP_DURATION_SECONDS 10
+
+bool deviceConnected = false;
 
 // Class that represents the physical vehicle and all of its systems
 class Car {
@@ -72,7 +84,6 @@ class Car {
       // 12-bit ADC conversion. Converts to 12v
       float voltage = (rawValue / 4095.0) * 3.3 * 5;
 
-
       //Prints data to serial for debugging
       Serial.print("Battery Input -> Raw: ");
       Serial.print(rawValue);
@@ -89,10 +100,16 @@ Car car(BATTERY_VOLTAGE_PIN, RELAY_PIN);
 unsigned long lastReadTime = 0;
 const long interval = 1000;
 
-// Handles BLE client disconnections to restart advertising
+// Handles BLE client connections and disconnections
 class ServerCallbacks: public BLEServerCallbacks {
+    void onConnect(BLEServer* pServer) {
+      Serial.println("Client connected.");
+      deviceConnected = true;
+    }
+
     void onDisconnect(BLEServer* pServer) {
       Serial.println("Client disconnected. Restarting BLE advertising...");
+      deviceConnected = false;
       BLEDevice::startAdvertising();
     }
 };
@@ -223,6 +240,13 @@ void loop() {
         bleUpdateStates();
     } else {
         bleUpdateStates();
+    }
+
+    // Initiates deep sleep if voltage is low, not connected, inverter is off, and AWAKE_DURATION_SECONDS have passed
+    if (currentVoltage < INVERTER_OFF_THRESHOLD && !deviceConnected && millis() > (AWAKE_DURATION_SECONDS * 1000) && !car.getInverterState()) {
+        Serial.printf("Voltage below threshold and no BLE connection. Sleeping for %d seconds...\n", SLEEP_DURATION_SECONDS);
+        esp_sleep_enable_timer_wakeup(SLEEP_DURATION_SECONDS * 1000000ULL);
+        esp_deep_sleep_start();
     }
   }
 
