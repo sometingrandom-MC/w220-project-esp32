@@ -4,11 +4,12 @@
 #include <cstdint>
 #include <esp_sleep.h>
 
-// ESP32 Pin Configuration
+// ESP32 Configuration
 #define RELAY_PIN 18
 #define BATTERY_VOLTAGE_PIN 3
 
 // Bluetooth UUID Configuration
+#define BLE_NAME "Mercedes-Benz S430"
 #define SERVICE_UUID "4fafc201-1fb5-459e-8fcc-c5c9c331914b"
 #define AUTOMATIC_INVERTER_MODE_CHARACTERISTIC_UUID "beb5483e-36e1-4688-b7f5-ea07361b26a8"
 #define BATTERY_VOLTAGE_CHARACTERISTIC_UUID "0859e192-00ba-4690-bb66-94d2d132a255"
@@ -18,7 +19,7 @@
 #define INVERTER_ON_THRESHOLD 13.2
 #define INVERTER_OFF_THRESHOLD 12.8
 #define INVERTER_EMERGENCY_THRESHOLD 12.0
-#define DEBUG_MODE true // Emergency threshold bypass
+#define DEBUG_MODE false // Emergency threshold bypass
 
 // Sleep Configuration
 #define AWAKE_DURATION_SECONDS 2
@@ -150,6 +151,7 @@ class InverterAutomaticCallbacks: public BLECharacteristicCallbacks {
 BLECharacteristic *pVoltageChar;
 BLECharacteristic *pInverterState;
 BLECharacteristic *pAutomaticInverterMode;
+BLEServer *pServer;
 
 void setup() {
   Serial.begin(115200);
@@ -158,8 +160,8 @@ void setup() {
   car.begin();
 
   // Bluetooth Initialization
-  BLEDevice::init("Mercedes-Benz S430");
-  BLEServer *pServer = BLEDevice::createServer();
+  BLEDevice::init(BLE_NAME);
+  pServer = BLEDevice::createServer();
 
   // Assign the server callbacks here so advertising restarts on disconnect
   pServer->setCallbacks(new ServerCallbacks());
@@ -205,12 +207,12 @@ void bleUpdateStates() {
 
 void loop() {
   // Handle BLE disconnect safely
-  if (!deviceConnected && oldDeviceConnected) {
-      delay(500); // Give the Bluetooth stack time to clean up
-      BLEDevice::startAdvertising();
-      Serial.println("Restarting BLE advertising...");
-      oldDeviceConnected = deviceConnected;
-  }
+    if (!deviceConnected && oldDeviceConnected) {
+        delay(500); // Give the Bluetooth stack time to clean up
+        pServer->startAdvertising();
+        Serial.println("Restarting BLE advertising...");
+        oldDeviceConnected = deviceConnected;
+    }
 
   // Handle BLE connect
   if (deviceConnected && !oldDeviceConnected) {
@@ -250,18 +252,19 @@ void loop() {
     if (currentVoltage < INVERTER_OFF_THRESHOLD && car.getAutomaticState()) {
         if (car.getInverterState() != false) {
             car.setInverterState(false);
-            bleUpdateStates();
         }
     } else if (currentVoltage >= INVERTER_ON_THRESHOLD && car.getAutomaticState()) {
         if (car.getInverterState() != true) {
             car.setInverterState(true);
-            bleUpdateStates();
         }
     } else if (currentVoltage < INVERTER_EMERGENCY_THRESHOLD && !DEBUG_MODE) {
         if (car.getInverterState() != false) {
             car.setInverterState(false);
-            bleUpdateStates();
         }
+    }
+    // Updates connected device states
+    if (deviceConnected) {
+        bleUpdateStates();
     }
 
     // Initiates deep sleep if voltage is low, not connected, inverter is off, and AWAKE_DURATION_SECONDS have passed
