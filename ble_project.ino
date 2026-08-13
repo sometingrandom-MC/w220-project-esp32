@@ -25,6 +25,7 @@
 #define SLEEP_DURATION_SECONDS 10
 
 bool deviceConnected = false;
+bool oldDeviceConnected = false;
 
 // Class that represents the physical vehicle and all of its systems
 class Car {
@@ -108,9 +109,8 @@ class ServerCallbacks: public BLEServerCallbacks {
     }
 
     void onDisconnect(BLEServer* pServer) {
-      Serial.println("Client disconnected. Restarting BLE advertising...");
+      Serial.println("Client disconnected.");
       deviceConnected = false;
-      BLEDevice::startAdvertising();
     }
 };
 
@@ -189,6 +189,9 @@ void setup() {
 
 // Called to update states over BLE immediately after changes
 void bleUpdateStates() {
+    // Stop crash by preventing notify() when no client is connected
+    if (!deviceConnected) return;
+
     // Sends inverter state
     bool inverterState = car.getInverterState();
     pInverterState->setValue((uint8_t*)&inverterState, 1);
@@ -201,6 +204,19 @@ void bleUpdateStates() {
 }
 
 void loop() {
+  // Handle BLE disconnect safely
+  if (!deviceConnected && oldDeviceConnected) {
+      delay(500); // Give the Bluetooth stack time to clean up
+      BLEDevice::startAdvertising();
+      Serial.println("Restarting BLE advertising...");
+      oldDeviceConnected = deviceConnected;
+  }
+
+  // Handle BLE connect
+  if (deviceConnected && !oldDeviceConnected) {
+      oldDeviceConnected = deviceConnected;
+  }
+
   // Serial debugging controls
   if (Serial.available() > 0) {
     char incomingByte = Serial.read();
@@ -225,21 +241,27 @@ void loop() {
     // Sends battery voltage on interval
     float currentVoltage = car.getBatteryVoltage();
 
-    pVoltageChar->setValue((uint8_t*)&currentVoltage, sizeof(currentVoltage));
-    pVoltageChar->notify();
+    if (deviceConnected) {
+        pVoltageChar->setValue((uint8_t*)&currentVoltage, sizeof(currentVoltage));
+        pVoltageChar->notify();
+    }
 
     // Automatic inverter state control based on battery voltage and automatic mode state
     if (currentVoltage < INVERTER_OFF_THRESHOLD && car.getAutomaticState()) {
-        car.setInverterState(false);
-        bleUpdateStates();
+        if (car.getInverterState() != false) {
+            car.setInverterState(false);
+            bleUpdateStates();
+        }
     } else if (currentVoltage >= INVERTER_ON_THRESHOLD && car.getAutomaticState()) {
-        car.setInverterState(true);
-        bleUpdateStates();
+        if (car.getInverterState() != true) {
+            car.setInverterState(true);
+            bleUpdateStates();
+        }
     } else if (currentVoltage < INVERTER_EMERGENCY_THRESHOLD && !DEBUG_MODE) {
-        car.setInverterState(false);
-        bleUpdateStates();
-    } else {
-        bleUpdateStates();
+        if (car.getInverterState() != false) {
+            car.setInverterState(false);
+            bleUpdateStates();
+        }
     }
 
     // Initiates deep sleep if voltage is low, not connected, inverter is off, and AWAKE_DURATION_SECONDS have passed
